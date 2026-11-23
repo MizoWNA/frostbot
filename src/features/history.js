@@ -53,13 +53,22 @@ const saveState = (chId, cursor, count, seen, done) => sql`
 
 const loadRows = async () => new Map((await sql`select * from frostbot.history_state`).map((r) => [r.main_channel_id, r]));
 
-/** Messages looked at per minute over the last ~10 minutes. */
+/** Record each running channel's live progress (called every panel refresh, ~1/min). */
+function sampleRates() {
+  const now = Date.now();
+  for (const p of live.values()) {
+    p.samples.push([now, p.seen]);
+    while (p.samples.length > 2 && now - p.samples[0][0] > 10 * 60_000) p.samples.shift();
+  }
+}
+
+/** Messages looked at per minute over the last ~10 minutes; null until there's enough to tell. */
 function rateOf(p) {
   const s = p.samples;
-  if (s.length < 2) return 0;
+  if (s.length < 2) return null;
   const [t0, n0] = s[0];
   const [t1, n1] = s.at(-1);
-  return t1 > t0 ? ((n1 - n0) / (t1 - t0)) * 60_000 : 0;
+  return t1 - t0 >= 30_000 ? ((n1 - n0) / (t1 - t0)) * 60_000 : null;
 }
 
 async function backfillChannel(ch, row) {
@@ -138,12 +147,10 @@ async function backfillChannel(ch, row) {
           }
         }
         cursor = m.id;
+        Object.assign(p, { count, seen, cursor, failed }); // live progress for the panel
       }
       await flush(); // never save a cursor past messages still waiting in a pack
       Object.assign(p, { count, seen, cursor, failed });
-      const now = Date.now();
-      p.samples.push([now, seen]);
-      while (p.samples.length > 2 && now - p.samples[0][0] > 10 * 60_000) p.samples.shift();
       await saveState(ch.id, cursor, count, seen, false);
     }
   } finally {
@@ -361,9 +368,11 @@ const bar = (pct, n = 14) => {
 };
 const ts = (ms, f = 'R') => `<t:${Math.floor(ms / 1000)}:${f}>`;
 const num = (n) => Number(n ?? 0).toLocaleString('en-US');
-const eta = (left, perMin) => (perMin > 0.5 ? ts(Date.now() + (left / perMin) * 60_000) : '—');
+const eta = (left, perMin) => (perMin == null ? 'measuring…' : perMin > 0.5 ? ts(Date.now() + (left / perMin) * 60_000) : '—');
+const rate = (perMin) => (perMin == null ? 'measuring…' : `${Math.round(perMin)}/min`);
 
 async function renderPanel(guild) {
+  sampleRates();
   const h = await historyStatus(guild);
   const fid = h.focus;
   const lines = [];
@@ -381,13 +390,14 @@ async function renderPanel(guild) {
     else {
       lines.push(`\`${bar(pct)}\` **${pct.toFixed(1)}%**`);
       lines.push(`${num(seen)} / ${num(tot)} messages${a ? ` · up to ${ts(a.at, 'D')}` : ''}`);
-      lines.push(a ? `**${Math.round(a.rate)}/min** · done ${eta(tot - seen, a.rate)}` : h.running ? 'waiting for a free slot…' : 'not running');
+      lines.push(a ? `**${rate(a.rate)}** · done ${eta(tot - seen, a.rate)}` : h.running ? 'waiting for a free slot…' : 'not running');
     }
   }
 
   const others = h.active.filter((x) => x.id !== fid);
-  const rateAll = h.active.reduce((s, x) => s + x.rate, 0);
-  const rateOthers = others.reduce((s, x) => s + x.rate, 0);
+  const sum = (xs) => (xs.some((x) => x.rate == null) ? null : xs.reduce((s, x) => s + x.rate, 0));
+  const rateAll = sum(h.active);
+  const rateOthers = sum(others);
   const pctAll = h.total ? (h.seen / h.total) * 100 : 0;
   const skip = new Set(h.skipped);
   const leftOthers = [...h.rows.values()]
@@ -397,10 +407,10 @@ async function renderPanel(guild) {
   lines.push('', '### Whole server');
   lines.push(`\`${bar(pctAll)}\` **${pctAll.toFixed(1)}%** · ${h.channelsDone}/${h.channelsTotal} channels done`);
   lines.push(`${num(h.seen)} / ${num(h.total)} looked at · **${num(h.messages)}** copied · ${num(Math.max(0, h.seen - h.messages))} bot posts skipped`);
-  lines.push(`**Speed:** ${Math.round(rateAll)}/min${h.serverTotal ? ` · server has ${num(h.serverTotal)} messages and counting` : ''}`);
+  lines.push(`**Speed:** ${rate(rateAll)}${h.serverTotal ? ` · server has ${num(h.serverTotal)} messages and counting` : ''}`);
   if (others.length) {
     lines.push(`**Other channels:** done ${eta(leftOthers, rateOthers)}`);
-    for (const x of others.slice(0, 6)) lines.push(`-# ⏳ <#${x.id}> ${x.pct != null ? `${x.pct.toFixed(0)}%` : ''} · ${Math.round(x.rate)}/min${x.failed ? ` · ⚠️ ${x.failed} failed` : ''}`);
+    for (const x of others.slice(0, 6)) lines.push(`-# ⏳ <#${x.id}> ${x.pct != null ? `${x.pct.toFixed(0)}%` : ''} · ${rate(x.rate)}${x.failed ? ` · ⚠️ ${x.failed} failed` : ''}`);
   }
   if (h.skipped.length) lines.push(`-# Live-only (no history): ${h.skipped.map((id) => `<#${id}>`).join(' ')}`);
 

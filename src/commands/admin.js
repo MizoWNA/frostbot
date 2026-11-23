@@ -332,7 +332,7 @@ export default [
           `**State:** ${h.state}${h.running ? ' (running)' : ''}`,
           `**Channels finished:** ${h.channelsDone}/${h.channelsTotal}${h.skipped.length ? ` (+${h.skipped.length} live-only)` : ''}`,
           `**Messages:** ${h.messages.toLocaleString()} copied, ${h.seen.toLocaleString()} / ${h.total.toLocaleString()} looked at`,
-          ...h.active.map((a) => `⏳ #${a.name}: ${a.pct != null ? `${a.pct.toFixed(1)}%` : '?'} (up to <t:${Math.floor(a.at / 1000)}:d>), ${Math.round(a.rate)}/min${a.failed ? `, ⚠️ ${a.failed} failed` : ''}`),
+          ...h.active.map((a) => `⏳ #${a.name}: ${a.pct != null ? `${a.pct.toFixed(1)}%` : '?'} (up to <t:${Math.floor(a.at / 1000)}:d>), ${a.rate == null ? 'measuring' : `${Math.round(a.rate)}/min`}${a.failed ? `, ⚠️ ${a.failed} failed` : ''}`),
           `-# Live panel: \`${ctx.prefix} mirror history panel\` in any channel`,
         ];
         return reply(ctx.msg, 'info', lines.join('\n'), '📜 History copy');
