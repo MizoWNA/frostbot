@@ -1,0 +1,24 @@
+# /etc/systemd/system/frostbot.service
+# sudo systemctl daemon-reload && sudo systemctl enable --now frostbot
+# logs: journalctl -u frostbot -f
+[Unit]
+Description=Frostbot Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=frostbot
+WorkingDirectory=/opt/frostbot
+ExecStart=/usr/bin/node --max-old-space-size=150 src/index.js
+Restart=always
+RestartSec=5
+# The bot writes nothing to disk (all state is in Supabase), so lock the filesystem down.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

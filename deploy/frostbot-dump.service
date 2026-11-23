@@ -1,0 +1,8 @@
+# ~/.config/systemd/user/frostbot-dump.service   (on YOUR machine, not the bot server)
+[Unit]
+Description=Pull Frostbot server dump
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/frostbot-dump.env
+ExecStart=%h/.local/bin/frostbot-pull-dump

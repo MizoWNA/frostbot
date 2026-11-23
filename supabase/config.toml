@@ -1,0 +1,5 @@
+project_id = "eafrclfpywnpblssswgo"
+
+# The dump API does its own auth (API_TOKEN bearer), so Supabase's JWT check is off.
+[functions.frostbot-dump]
+verify_jwt = false

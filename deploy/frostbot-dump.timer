@@ -1,0 +1,13 @@
+# ~/.config/systemd/user/frostbot-dump.timer
+# systemctl --user daemon-reload && systemctl --user enable --now frostbot-dump.timer
+# (and `loginctl enable-linger $USER` so it runs while you're logged out)
+[Unit]
+Description=Pull Frostbot server dump weekly
+
+[Timer]
+OnCalendar=weekly          # or: daily
+Persistent=true            # catch up if the machine was off
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

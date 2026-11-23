@@ -1,0 +1,27 @@
+{
+  "name": "frostbot",
+  "version": "1.0.0",
+  "description": "Custom moderation + anti-nuke bot",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --max-old-space-size=150 src/index.js",
+    "dev": "node --watch src/index.js",
+    "check": "for f in $(find src scripts -name '*.js'); do node --check $f || exit 1; done",
+    "migrate": "node scripts/migrate.js",
+    "deploy:dump": "sh scripts/deploy-dump.sh",
+    "mirror:sync": "node scripts/mirror-sync.js",
+    "ship": "sh scripts/ship.sh"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@12.23.0",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.28.1",
+    "postgres": "^4.1.1"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20.12"
+  }
+}
