@@ -38,11 +38,11 @@ export async function boardEmbed(guild) {
   // Only people still in the server need action; banned/left members keep their history (frst warns).
   const rows = all.filter((r) => guild.members.cache.has(r.user_id));
   const gone = all.length - rows.length;
-  const flagged = rows.filter((r) => r.n > flag);
-  const rest = rows.filter((r) => r.n <= flag);
+  const flagged = rows.filter((r) => r.n >= flag);
+  const rest = rows.filter((r) => r.n < flag);
 
   const fmt = (r, hot) => {
-    const dot = hot ? '🔴' : r.n === flag ? '🟠' : '🟡';
+    const dot = hot ? '🔴' : r.n === flag - 1 ? '🟠' : '🟡'; // 🟠 = one away from the limit
     // Links (e.g. "write-up: https://…") don't fit the board line; frst warns shows them in full.
     const text = r.last_reason?.replace(/\s*·?\s*(write-up:\s*)?https?:\/\/\S+/g, '').trim();
     const reason = text ? ` — ${truncate(text, 60)}` : '';
@@ -52,7 +52,7 @@ export async function boardEmbed(guild) {
 
   const lines = [];
   if (flagged.length) {
-    lines.push(`## 🚨 Needs action (more than ${flag})`);
+    lines.push(`## 🚨 Needs action (${flag}+ warnings)`);
     lines.push(...flagged.map((r) => fmt(r, true)));
     lines.push('');
   }

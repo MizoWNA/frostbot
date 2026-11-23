@@ -14,7 +14,7 @@ export const DEFAULTS = {
   modlog: null,               // channel id for mod/anti-nuke logs
   warnboard_channel: null,
   warnboard_message: null,
-  warn_flag: '3',             // members with MORE than this many warnings get flagged
+  warn_flag: '3',             // members with this many warnings (or more) get flagged
   newacct: 'on',              // kick brand-new accounts
   min_age_days: '2',          // accounts younger than this get kicked
   antinuke: 'on',
@@ -29,7 +29,7 @@ export const DEFAULTS = {
 
 export const SETTING_HELP = {
   modlog: 'log channel (#channel / off)',
-  warn_flag: 'flag members with more than N warnings',
+  warn_flag: 'flag members once they reach N warnings',
   newacct: 'kick new accounts (on/off)',
   min_age_days: 'minimum account age in days',
   antinuke: 'anti-nuke detection (on/off)',

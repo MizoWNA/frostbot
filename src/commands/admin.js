@@ -11,7 +11,7 @@ import { startHistory, stopHistory, historyStatus, setSkipped, setPacked, refres
 import { refreshBoard } from '../features/warnings.js';
 
 const ONOFF = new Set(['newacct', 'antinuke', 'mirror', 'rolepersist']);
-const NUMS = { warn_flag: [0, 100], min_age_days: [0, 365], antinuke_window: [3, 600], antinuke_limit: [1, 50], mirror_map_days: [1, 365] };
+const NUMS = { warn_flag: [1, 100], min_age_days: [0, 365], antinuke_window: [3, 600], antinuke_limit: [1, 50], mirror_map_days: [1, 365] };
 
 const dumpFiles = (d, which = 'both') => [
   ...(which !== 'json' ? [new AttachmentBuilder(Buffer.from(dumpToText(d)), { name: dumpFileName(d, 'txt') })] : []),

@@ -20,11 +20,11 @@ export default [
       const { id, count } = await addWarning(ctx.guild, m.user, ctx.member.id, reason);
       const flag = getNum(ctx.guild.id, 'warn_flag');
       await m.send(`⚠️ You were warned in **${ctx.guild.name}**: ${reason}\nYou now have ${count} warning(s).`).catch(() => {});
-      await reply(ctx.msg, count > flag ? 'bad' : 'warn', `⚠️ Warned ${m} (#${id}). They now have **${count}** warning(s).${count > flag ? '\n🚨 **Over the limit, they need action.**' : ''}`);
+      await reply(ctx.msg, count >= flag ? 'bad' : 'warn', `⚠️ Warned ${m} (#${id}). They now have **${count}** warning(s).${count >= flag ? `\n🚨 **At the limit (${flag}), they need action.**` : ''}`);
       await refreshBoard(ctx.guild).catch((e) => console.error('[warnboard]', e.message));
       await modlog(
         ctx.guild,
-        embed(count > flag ? 'bad' : 'warn', [`**User:** ${m} \`${m.user.tag}\``, `**Reason:** ${reason}`, `**Total:** ${count}`, `**Mod:** ${ctx.member}`].join('\n'), count === flag + 1 ? '🚨 Warning limit passed, action needed' : `Warning #${id}`),
+        embed(count >= flag ? 'bad' : 'warn', [`**User:** ${m} \`${m.user.tag}\``, `**Reason:** ${reason}`, `**Total:** ${count}`, `**Mod:** ${ctx.member}`].join('\n'), count === flag ? '🚨 Warning limit reached, action needed' : `Warning #${id}`),
       );
     },
   },

@@ -6,7 +6,7 @@ Custom moderation + anti-nuke bot. Prefix commands (`frst <command>`), Supabase 
 - **Anti-nuke**: watches the audit log. One account deleting channels/roles, mass-banning/kicking, spamming channels/webhooks, or giving roles dangerous perms too fast gets stripped/kicked/banned. The bot then deletes their webhooks, reverses their bans, and DMs the owner.
 - **Structure dumps**: roles + perms, channels + permission overwrites, every member's roles, server settings. Generated **on request** (Supabase Edge Function API or `frst backup`) as `.json` (for restore) and `.txt` (readable). Only the latest one is cached. No messages, no media.
 - **Restore**: rebuilds roles/channels/perms/member roles from a dump, then refills recreated channels from the mirror via webhooks.
-- **Warning board**: pinned embed; members with more than `warn_flag` (default 3) warnings jump to the top under 🚨 *Needs action*.
+- **Warning board**: a sticky panel (stays the last message in its channel); members who reach `warn_flag` (default 3) warnings jump to the top under 🚨 *Needs action*.
 - **New account kicker**: accounts younger than `min_age_days` (default 2) get a DM + kick.
 - Usual moderation: kick, ban, timeout, purge, lock, lockdown, slowmode, nick, role, whois.
 
