@@ -12,6 +12,17 @@ let timer = null;
 
 export const lockHolderId = ME;
 
+/** Is a process with this pid running on this machine? */
+function alive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === 'EPERM'; // exists but isn't ours
+  }
+}
+
 export async function acquireLock() {
   let warned = false;
   for (;;) {
@@ -22,6 +33,18 @@ export async function acquireLock() {
       returning holder`;
     if (got.length) break;
     const [cur] = await sql`select holder, heartbeat from frostbot.instance_lock where name = 'bot'`;
+    // Our own previous run on this same machine/container that died without releasing the lock
+    // (e.g. a panel restart killed it): take over right away instead of waiting 90 s.
+    const [host, pid] = (cur?.holder ?? '').split(':');
+    // (Containers reuse pids: same pid as ours but a different holder id means it's a dead run.)
+    if (host === os.hostname() && (Number(pid) === process.pid || !alive(Number(pid)))) {
+      const took = await sql`update frostbot.instance_lock set holder = ${ME}, heartbeat = now()
+                             where name = 'bot' and holder = ${cur.holder} returning 1`;
+      if (took.length) {
+        console.log(`[lock] previous run here (${cur.holder}) is gone, taking over`);
+        break;
+      }
+    }
     if (!warned) console.warn(`[lock] another FrostBot is running (${cur?.holder}, last heartbeat ${cur?.heartbeat?.toISOString()}). Waiting for it to stop…`);
     warned = true;
     await new Promise((r) => setTimeout(r, 15_000));
