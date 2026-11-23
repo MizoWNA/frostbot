@@ -34,7 +34,10 @@ const boardRows = (guildId) => sql`
 
 export async function boardEmbed(guild) {
   const flag = getNum(guild.id, 'warn_flag');
-  const rows = await boardRows(guild.id);
+  const all = await boardRows(guild.id);
+  // Only people still in the server need action; banned/left members keep their history (frst warns).
+  const rows = all.filter((r) => guild.members.cache.has(r.user_id));
+  const gone = all.length - rows.length;
   const flagged = rows.filter((r) => r.n > flag);
   const rest = rows.filter((r) => r.n <= flag);
 
@@ -56,6 +59,7 @@ export async function boardEmbed(guild) {
     lines.push(...rest.map((r) => fmt(r, false)));
   }
   if (!rows.length) lines.push('No active warnings. ✨');
+  if (gone) lines.push('', `-# + ${gone} warned user(s) no longer in the server (banned or left). Their history stays in \`frst warns\`.`);
 
   // Embed descriptions max out at 4096 chars.
   let desc = '';
