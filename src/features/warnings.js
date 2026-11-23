@@ -43,7 +43,9 @@ export async function boardEmbed(guild) {
 
   const fmt = (r, hot) => {
     const dot = hot ? '🔴' : r.n === flag ? '🟠' : '🟡';
-    const reason = r.last_reason ? ` — ${truncate(r.last_reason, 60)}` : '';
+    // Links (e.g. "write-up: https://…") don't fit the board line; frst warns shows them in full.
+    const text = r.last_reason?.replace(/\s*·?\s*(write-up:\s*)?https?:\/\/\S+/g, '').trim();
+    const reason = text ? ` — ${truncate(text, 60)}` : '';
     const count = hot ? `**${r.n} warnings**` : `${r.n} warning${r.n === 1 ? '' : 's'}`;
     return `${dot} <@${r.user_id}> \`${r.user_tag ?? r.user_id}\` · ${count} · <t:${Math.floor(r.last.getTime() / 1000)}:R>${reason}`;
   };
