@@ -93,11 +93,13 @@ export function hierarchyError(mod, target) {
 }
 
 /** Post to the configured mod-log channel (silently does nothing if unset). */
-export async function modlog(guild, e) {
+/** Post to the mod-log channel (optionally with files). Returns the message, or null if unset. */
+export async function modlog(guild, e, files = []) {
   const id = getSetting(guild.id, 'modlog');
-  if (!id) return;
+  if (!id) return null;
   const ch = guild.channels.cache.get(id);
-  if (ch?.isTextBased()) await ch.send({ embeds: [e], allowedMentions: { parse: [] } }).catch(() => {});
+  if (!ch?.isTextBased()) return null;
+  return ch.send({ embeds: [e], files, allowedMentions: { parse: [] } }).catch(() => null);
 }
 
 export { permNames } from '../supabase/functions/_shared/dumpCore.js';

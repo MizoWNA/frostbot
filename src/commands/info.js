@@ -147,7 +147,7 @@ async function member(g, m) {
     '',
     `WARNINGS (${warns.length} active)`,
     ...(warns.length
-      ? warns.map((w) => `  #${w.id} · ${date(new Date(w.created_at).getTime())} · by ${g.members.cache.get(w.mod_id)?.displayName ?? w.mod_id} · ${w.reason ?? '(no reason)'}`)
+      ? warns.map((w) => `  #${w.id} · ${date(new Date(w.created_at).getTime())} · by ${g.members.cache.get(w.mod_id)?.displayName ?? w.mod_id} · ${w.reason ?? '(no reason)'}${w.proof ? `\n      proof: ${w.proof}` : ''}`)
       : ['  none']),
   ];
 }

@@ -4,6 +4,7 @@ import { PREFIX, MAIN_GUILD_ID, MIRROR_GUILD_ID } from '../config.js';
 import { embed, reply } from '../util.js';
 import { isTrusted } from '../features/antinuke.js';
 import { modRoleOf } from '../features/mirror.js';
+import { isMod, isAdmin, adminRoleOf } from '../perms.js';
 import moderation from './moderation.js';
 import warnings from './warnings.js';
 import admin from './admin.js';
@@ -56,12 +57,8 @@ function canUse(ctx, cmd) {
   if (m.id === ctx.guild.ownerId) return true;
   if (cmd.perm === 'owner') return false;
   if (cmd.perm === 'trusted') return isTrusted(ctx.guild, m.id);
-  if (cmd.perm === 'mod') {
-    // The mod role (setting mirror_mod_role, else "Moderators") or anything above it.
-    if (m.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
-    const mod = modRoleOf(ctx.guild);
-    return mod ? m.roles.highest.position >= mod.position : m.permissions.has(PermissionsBitField.Flags.ModerateMembers);
-  }
+  if (cmd.perm === 'mod') return isMod(m);
+  if (cmd.perm === 'admin') return isAdmin(m);
   return m.permissions.has(cmd.perm);
 }
 
@@ -69,6 +66,7 @@ const permLabel = (perm, guild) =>
   perm === 'owner' ? 'the server owner'
   : perm === 'trusted' ? 'the owner or a trusted user'
   : perm === 'mod' ? `the **${modRoleOf(guild)?.name ?? 'Moderators'}** role or higher`
+  : perm === 'admin' ? `the **${adminRoleOf(guild)?.name ?? 'Admins'}** role or higher`
   : `the **${new PermissionsBitField(perm).toArray()[0]}** permission`;
 
 export async function handleCommand(msg) {

@@ -1,10 +1,21 @@
 import { PermissionFlagsBits as P, ChannelType } from 'discord.js';
+import { isAdmin } from '../perms.js';
 import { embed, reply, modlog, parseDuration, fmtDuration, resolveMember, resolveUser, resolveChannel, resolveRole, hierarchyError, parseIntStrict } from '../util.js';
 import { getSetting, setSetting } from '../settings.js';
 
 const MAX_TIMEOUT = 28 * 86_400_000;
 
 /** Common "resolve target member + check hierarchy" step. Replies with an error and returns null on failure. */
+/** Rename the bot itself (Admins role or higher). */
+async function setBotNick(ctx, name) {
+  if (!isAdmin(ctx.member)) return reply(ctx.msg, 'bad', 'Only **Admins** or higher can rename me.');
+  if (!name) return reply(ctx.msg, 'bad', `Usage: \`${ctx.prefix} botnick <new name|reset>\``);
+  const nick = name.toLowerCase() === 'reset' ? null : name.slice(0, 32);
+  await ctx.guild.members.me.setNickname(nick, `by ${ctx.member.user.tag}`);
+  await reply(ctx.msg, 'ok', nick ? `✏️ I'm now **${nick}** here.` : '✏️ Nickname reset.');
+  await log(ctx, 'info', 'Bot nickname changed', [`**New:** ${nick ?? '(reset)'}`]);
+}
+
 async function target(ctx, usage, { allowSelf = false } = {}) {
   const m = await resolveMember(ctx.guild, ctx.args[0]);
   if (!m) {
@@ -222,8 +233,9 @@ export default [
     name: 'nick',
     perm: P.ManageNicknames,
     usage: 'nick @user <new name|reset>',
-    desc: "Change a member's nickname (yours too)",
+    desc: "Change a member's nickname (yours too; the bot's needs Admins or higher)",
     async run(ctx) {
+      if ((await resolveMember(ctx.guild, ctx.args[0]))?.id === ctx.guild.members.me.id) return setBotNick(ctx, ctx.args.slice(1).join(' '));
       const m = await target(ctx, ctx.usage, { allowSelf: true });
       if (!m) return;
       const name = ctx.args.slice(1).join(' ');
@@ -231,6 +243,13 @@ export default [
       await m.setNickname(name.toLowerCase() === 'reset' ? null : name.slice(0, 32), ctx.member.user.tag);
       await reply(ctx.msg, 'ok', `✏️ Nickname updated for ${m}.`);
     },
+  },
+  {
+    name: 'botnick',
+    perm: 'admin',
+    usage: 'botnick <new name|reset>',
+    desc: "Change the bot's nickname in this server",
+    run: (ctx) => setBotNick(ctx, ctx.args.join(' ')),
   },
   {
     name: 'role',

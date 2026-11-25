@@ -23,7 +23,8 @@ export const DEFAULTS = {
   antinuke_punish: 'strip',   // strip (remove all roles) | kick | ban
   mirror: 'on',               // copy messages (incl. media) into the mirror server
   mirror_map_days: '30',
-  mirror_mod_role: null,      // main-server role that counts as "mod"; channels only roles ABOVE it can see are hidden in the mirror      // keep main↔mirror message id links this long (for edit/delete sync)
+  mirror_mod_role: null,      // main-server role that counts as "mod" (null = role named Moderators); also the mirror's staff-only line
+  admin_role: null,           // role that counts as "admin" (null = role named Admins)
   rolepersist: 'off',         // give saved roles back when someone rejoins
 };
 
@@ -40,4 +41,5 @@ export const SETTING_HELP = {
   mirror_map_days: 'days to keep message id links for edit/delete sync',
   mirror_mod_role: 'main role that counts as mod (@role); staff-only channels above it are hidden in the mirror',
   rolepersist: 'give saved roles back when members rejoin (on/off)',
+  admin_role: 'role that counts as admin (@role); it and anything above can use admin commands like botnick',
 };

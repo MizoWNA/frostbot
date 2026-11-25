@@ -31,7 +31,7 @@ export default [
       if (!key || !(key in SETTING_HELP) || !value) {
         return reply(ctx.msg, 'bad', `Usage: \`${ctx.usage}\`\n\n${Object.entries(SETTING_HELP).map(([k, v]) => `\`${k}\`: ${v}`).join('\n')}`);
       }
-      if (key === 'mirror_mod_role') {
+      if (key === 'mirror_mod_role' || key === 'admin_role') {
         const role = resolveRole(ctx.guild, value);
         if (!role) return reply(ctx.msg, 'bad', 'Mention a role from the main server.');
         value = role.id;
@@ -55,7 +55,7 @@ export default [
         value = String(n);
       }
       await setSetting(ctx.guild.id, key, value);
-      await reply(ctx.msg, 'ok', `\`${key}\` → **${value === null ? 'off' : key === 'modlog' ? `<#${value}>` : key === 'mirror_mod_role' ? `<@&${value}>` : value}**`);
+      await reply(ctx.msg, 'ok', `\`${key}\` → **${value === null ? 'off' : key === 'modlog' ? `<#${value}>` : key === 'mirror_mod_role' || key === 'admin_role' ? `<@&${value}>` : value}**`);
       if (key === 'mirror_mod_role') await syncMirrorAccess(ctx.guild).catch(() => {});
       if (key === 'warn_flag') await refreshBoard(ctx.guild).catch(() => {});
     },
@@ -71,6 +71,7 @@ export default [
         const v = getSetting(ctx.guild.id, k);
         if (k === 'modlog') return v ? `<#${v}>` : 'off';
         if (k === 'mirror_mod_role') return v ? `<@&${v}>` : 'auto (role named Moderators)';
+        if (k === 'admin_role') return v ? `<@&${v}>` : 'auto (role named Admins)';
         return v ?? 'off';
       };
       const lines = Object.keys(SETTING_HELP).map((k) => `\`${k}\` = **${show(k)}**${getSetting(ctx.guild.id, k) !== (DEFAULTS[k] ?? null) ? ' *(changed)*' : ''}\n-# ${SETTING_HELP[k]}`);

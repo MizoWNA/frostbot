@@ -12,6 +12,42 @@ export async function addWarning(guild, user, modId, reason) {
     values (${guild.id}, ${user.id}, ${user.tag}, ${modId}, ${reason ?? null}) returning id`;
   return { id: Number(id), count: await warnCount(guild.id, user.id) };
 }
+/** Attach proof (links to the bot's messages holding the pictures) to a warning. */
+export const addProof = (guildId, id, links) =>
+  sql`update frostbot.warnings set proof = trim(coalesce(proof, '') || ' ' || ${links.join(' ')}) where guild_id = ${guildId} and id = ${id}`;
+
+/** "📎 proof" links for a warning, for messages. */
+// Proof pictures go to the private Supabase bucket `warn-proof` through the frostbot-proof
+// edge function (it holds the service key; the bot only has API_TOKEN). Each file gets a
+// permanent link that redirects to a short-lived signed URL.
+const PROOF_URL = process.env.PROOF_URL || 'https://eafrclfpywnpblssswgo.supabase.co/functions/v1/frostbot-proof';
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', txt: 'text/plain' };
+
+/** Upload downloaded files ({attachment: Buffer, name}) for a warning. Returns the links that worked. */
+export async function storeProof(guildId, warnId, files) {
+  if (!process.env.API_TOKEN) return [];
+  const stamp = Date.now().toString(36);
+  const out = [];
+  for (const [i, f] of files.entries()) {
+    const clean = f.name.replace(/[^\w.-]+/g, '_').replace(/^\.+/, '').slice(-80) || 'file';
+    const path = `${guildId}/${warnId}/${stamp}-${i + 1}-${clean}`;
+    try {
+      const res = await fetch(`${PROOF_URL}/upload?path=${encodeURIComponent(path)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.API_TOKEN}`, 'Content-Type': MIME[clean.split('.').pop().toLowerCase()] ?? 'application/octet-stream' },
+        body: f.attachment,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
+      out.push((await res.json()).url);
+    } catch (e) {
+      console.error(`[proof] upload of ${f.name} for warning #${warnId} failed:`, e.message);
+    }
+  }
+  return out;
+}
+
+export const proofLinks = (w) => (w.proof ? w.proof.split(/\s+/).map((u, i) => `[📎${w.proof.includes(' ') ? ` ${i + 1}` : ''}](${u})`).join(' ') : '');
+
 export async function warnCount(guildId, userId) {
   const [{ n }] = await sql`select count(*)::int as n from frostbot.warnings where guild_id = ${guildId} and user_id = ${userId} and active`;
   return n;

@@ -22,6 +22,8 @@ create table if not exists frostbot.warnings (
   active     boolean not null default true
 );
 create index if not exists warnings_user_idx on frostbot.warnings (guild_id, user_id) where active;
+-- links to the bot's own messages holding the proof pictures (space-separated); files live on Discord
+alter table frostbot.warnings add column if not exists proof text;
 
 -- main channel <-> mirror channel, plus the webhook that posts into the mirror channel
 create table if not exists frostbot.mirror_channels (
