@@ -9,11 +9,13 @@ import moderation from './moderation.js';
 import warnings from './warnings.js';
 import admin from './admin.js';
 import info from './info.js';
+import matchbox from './matchbox.js';
 
 const GROUPS = [
   ['🔨 Moderation', moderation],
   ['⚠️ Warnings', warnings],
   ['📄 Info', info],
+  ['🎮 Matchbox', matchbox],
   ['🛡️ Protection, backups & settings', admin],
 ];
 

@@ -26,6 +26,7 @@ export const DEFAULTS = {
   mirror_mod_role: null,      // main-server role that counts as "mod" (null = role named Moderators); also the mirror's staff-only line
   admin_role: null,           // role that counts as "admin" (null = role named Admins)
   rolepersist: 'off',         // give saved roles back when someone rejoins
+  mc_channel: null,           // Matchbox gamemaster voice channel (set with `frst mc here`)
 };
 
 export const SETTING_HELP = {

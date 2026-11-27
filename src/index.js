@@ -13,6 +13,7 @@ import { embed, modlog } from './util.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { resumeHistoryIfNeeded, haltHistoryForShutdown } from './features/history.js';
 import { onStickyChannelMessage } from './features/sticky.js';
+import { initMatchbox, onVoiceState } from './features/matchbox.js';
 
 if (!TOKEN) throw new Error('DISCORD_TOKEN is not set (see .env.example)');
 if (!MAIN_GUILD_ID) throw new Error('MAIN_GUILD_ID is not set (see .env.example)');
@@ -25,6 +26,7 @@ const client = new Client({
     I.MessageContent, // privileged: prefix commands + mirror
     I.GuildModeration, // audit log events for anti-nuke
     I.GuildWebhooks,
+    I.GuildVoiceStates, // Matchbox gamemaster: who is in the game voice channel
   ],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
   // Keep memory low (small VM): only a few recent messages per channel, no presences.
@@ -34,7 +36,6 @@ const client = new Client({
     PresenceManager: 0,
     GuildStickerManager: 0,
     GuildScheduledEventManager: 0,
-    VoiceStateManager: 0,
   }),
   sweepers: {
     ...Options.DefaultSweeperSettings,
@@ -66,6 +67,7 @@ client.once(Events.ClientReady, async () => {
     resumeHistoryIfNeeded(main);
   }
   await refreshBoard(main).catch(() => {});
+  await initMatchbox(client).catch((e) => console.error('[matchbox] init failed:', e.message));
 
   // Forget old main↔mirror message links (they only exist so edits/deletes can sync).
   const prune = () =>
@@ -120,6 +122,8 @@ client.on(Events.GuildMemberUpdate, (o, n) => {
 client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
   if (isMain(guild)) onAuditEntry(entry, guild).catch((e) => console.error('[antinuke]', e));
 });
+
+client.on(Events.VoiceStateUpdate, (o, n) => onVoiceState(o, n));
 
 client.on(Events.Error, (e) => console.error('[client]', e));
 // discord.js waits out rate limits silently; surface the long ones so a "stuck" sync is explainable.

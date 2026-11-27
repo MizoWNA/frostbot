@@ -103,3 +103,82 @@ create table if not exists frostbot.instance_lock (
   holder    text not null,
   heartbeat timestamptz not null
 );
+
+-- ===================== Matchbox (Minecraft) bridge =====================
+-- The Minecraft plugin (M4TCHBOX, on another machine behind a tunnel) and the bot talk
+-- through these tables; neither needs an inbound port. The plugin logs in as the
+-- restricted role `matchbox_plugin` (scripts/mc-role.js), which can only touch mc_*.
+
+-- Minecraft account <-> Discord account
+create table if not exists frostbot.mc_links (
+  mc_uuid    text primary key,
+  mc_name    text not null,
+  discord_id text not null unique,
+  linked_at  timestamptz not null default now()
+);
+
+-- short-lived codes shown in game by `/matchbox link`, redeemed with `frst mc link <code>`
+create table if not exists frostbot.mc_link_codes (
+  code       text primary key,
+  mc_uuid    text not null,
+  mc_name    text not null,
+  expires_at timestamptz not null
+);
+
+-- current state of each game, written by the plugin; the bot mutes/unmutes from it.
+-- phase: 'play' (everyone muted), 'meeting' (alive unmuted, dead muted), 'ended'.
+create table if not exists frostbot.mc_games (
+  session    text primary key,
+  phase      text not null,
+  alive      text[] not null default '{}',
+  dead       text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+-- admin commands from Discord (`frst mc start test`), run by the plugin as console
+create table if not exists frostbot.mc_commands (
+  id           bigserial primary key,
+  command      text not null,
+  requested_by text,
+  created_at   timestamptz not null default now(),
+  done_at      timestamptz,
+  ok           boolean,
+  result       text
+);
+create index if not exists mc_commands_pending_idx on frostbot.mc_commands (id) where done_at is null;
+
+-- members the bot server-muted for a game, so it only ever unmutes its own mutes
+create table if not exists frostbot.mc_muted (
+  discord_id text primary key,
+  muted_at   timestamptz not null default now()
+);
+
+-- instant wake-ups: the bot LISTENs on mc_games, the plugin on mc_commands
+create or replace function frostbot.mc_games_notify() returns trigger language plpgsql as $$
+begin
+  perform pg_notify('mc_games', new.session);
+  return new;
+end $$;
+drop trigger if exists mc_games_notify on frostbot.mc_games;
+create trigger mc_games_notify after insert or update on frostbot.mc_games
+  for each row execute function frostbot.mc_games_notify();
+
+create or replace function frostbot.mc_commands_notify() returns trigger language plpgsql as $$
+begin
+  perform pg_notify(case when new.done_at is null then 'mc_commands' else 'mc_results' end, new.id::text);
+  return new;
+end $$;
+drop trigger if exists mc_commands_notify on frostbot.mc_commands;
+create trigger mc_commands_notify after insert or update on frostbot.mc_commands
+  for each row execute function frostbot.mc_commands_notify();
+
+-- the plugin's restricted login (created with a password by scripts/mc-role.js)
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'matchbox_plugin') then
+    grant usage on schema frostbot to matchbox_plugin;
+    grant select on frostbot.mc_links to matchbox_plugin;
+    grant select, insert, delete on frostbot.mc_link_codes to matchbox_plugin;
+    grant select, insert, update, delete on frostbot.mc_games to matchbox_plugin;
+    grant select, update on frostbot.mc_commands to matchbox_plugin;
+  end if;
+end $$;
